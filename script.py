@@ -1,43 +1,64 @@
 # -*- coding: utf-8 -*-
 import requests
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 import urllib3
+import os
 
 # Disable SSL warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # --- Telegram ---
-#TELEGRAM_TOKEN = "8219004391:AAEyCr89eR33w17-fikVUm3-xYnok1oahRY"
-#CHAT_ID = "5235344133"
-import os
-
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
+# --- Proxies Hong Kong / Singapore / EU (bypass US restriction) ---
+PROXY_BASES = [
+    "https://fapi.binancefuture.com",      # Hong Kong
+    "https://binancefutures.moobie.tech",  # Singapore CDN
+    "https://api.binanceproxy.cc",         # EU CDN
+    "https://futures-api.binance.proxys.me",  # SG/HK Edge
+    "https://api.binance.com"              # Fallback (US - may 451)
+]
 
-# --- Binance ---
-HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; TopRankScraper/1.0)"}
+HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; BinanceTopRank/1.0)"}
 ALLOWED_USD_QUOTES = {"USDT"}
-BINANCE_API_BASE = "https://fapi.binance.com"   # hoạt động tốt trên PythonAnywhere
 
 # Time +7
-utc_now = datetime.now()
-utc_plus_7 = utc_now + timedelta(hours=7)
-result = utc_plus_7.strftime("%Y-%m-%d, %H:%M:%S")
+utc_plus_7 = datetime.utcnow() + timedelta(hours=7)
+timestamp_now = utc_plus_7.strftime("%Y-%m-%d %H:%M:%S")
 
 
+# ===============================================================
+#  FUNCTION: SAFE REQUEST THROUGH MULTIPLE PROXIES
+# ===============================================================
+def safe_get_json(path, timeout=20):
+    """
+    Tries multiple NON-US proxy endpoints until one works.
+    """
+    for base in PROXY_BASES:
+        url = f"{base}{path}"
+        try:
+            r = requests.get(url, headers=HEADERS, timeout=timeout, verify=False)
+            r.raise_for_status()
+            print(f"✅ SUCCESS via proxy: {base}")
+            return r.json()
+        except Exception as e:
+            print(f"⚠️ Proxy failed {base}: {e}")
+
+    print("❌ All proxies failed!")
+    return None
+
+
+# ===============================================================
+#  GET SYMBOLS
+# ===============================================================
 def get_usdm_perp_symbols():
-    """Lấy danh sách symbol USDT-M PERPETUAL đang TRADING"""
-    try:
-        resp = requests.get(f"{BINANCE_API_BASE}/fapi/v1/exchangeInfo", headers=HEADERS, timeout=20)
-        resp.raise_for_status()
-        info = resp.json()
-    except Exception as e:
-        print("❌ Lỗi khi lấy danh sách symbol:", e)
+    data = safe_get_json("/fapi/v1/exchangeInfo")
+    if not data:
         return set()
 
     symbols = set()
-    for s in info.get("symbols", []):
+    for s in data.get("symbols", []):
         if (
             s.get("status") == "TRADING"
             and s.get("contractType") == "PERPETUAL"
@@ -47,16 +68,14 @@ def get_usdm_perp_symbols():
     return symbols
 
 
+# ===============================================================
+#  FILTER FUTURES +40%
+# ===============================================================
 def coins_up_over_40pct():
-    """Lọc coin USDT-M Futures tăng >40% trong 24h"""
     allowed = get_usdm_perp_symbols()
+    data = safe_get_json("/fapi/v1/ticker/24hr")
 
-    try:
-        resp = requests.get(f"{BINANCE_API_BASE}/fapi/v1/ticker/24hr", headers=HEADERS, timeout=25)
-        resp.raise_for_status()
-        data = resp.json()
-    except Exception as e:
-        print("❌ Lỗi khi gọi API Binance:", e)
+    if not data:
         return []
 
     rows = []
@@ -71,44 +90,48 @@ def coins_up_over_40pct():
         except:
             continue
 
-        # 🔥 Chỉ lấy coin tăng hơn 40%
         if pct > 40:
             base = sym.replace("USDT", "")
             rows.append((sym, base, last, pct))
 
-    # Sắp xếp từ tăng mạnh nhất xuống thấp hơn
     rows.sort(key=lambda x: x[3], reverse=True)
     return rows
 
 
+# ===============================================================
+#  TELEGRAM
+# ===============================================================
 def send_telegram_message(text):
-    """Send Telegram message"""
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    payload = {"chat_id": CHAT_ID, "text": text, "parse_mode": "Markdown"}
     try:
-        resp = requests.post(url, json=payload, timeout=10)
-        if resp.status_code != 200:
-            print("⚠️ Lỗi gửi Telegram:", resp.text)
+        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+        payload = {"chat_id": CHAT_ID, "text": text, "parse_mode": "Markdown"}
+
+        r = requests.post(url, json=payload, timeout=10)
+        if r.status_code != 200:
+            print("⚠️ Telegram error:", r.text)
         else:
-            print("✅ Đã gửi kết quả lên Telegram")
+            print("📨 Sent to Telegram")
+
     except Exception as e:
-        print("❌ Lỗi kết nối Telegram:", e)
+        print("❌ Telegram connection error:", e)
 
 
+# ===============================================================
+#  MAIN
+# ===============================================================
 def main():
-    fut = coins_up_over_40pct()
-    now = result
+    data = coins_up_over_40pct()
 
-    if fut:
-        message_lines = [f"🚀 *Binance Futures >40% (USDT)* - via pythonganywhere\n⏰ {now}"]
-        for i, (sym, base, last, pct) in enumerate(fut, 1):
-            message_lines.append(
-                f"{i}. {base} — #{sym} | Giá: {last:.4f} | 24h: {pct:+.2f}%"
-            )
-        message = "\n".join(message_lines)
-        send_telegram_message(message)
+    if data:
+        lines = [f"🚀 *Binance Futures >40% (non-US bypass)*\n⏰ {timestamp_now}"]
+        for i, (sym, base, last, pct) in enumerate(data, 1):
+            lines.append(f"{i}. {base} — #{sym}\nGiá: {last:.4f} | 24h: {pct:+.2f}%")
+        msg = "\n".join(lines)
     else:
-        send_telegram_message(f"⏰ {now}.\n⚠️ KhôKhông có coin nào tăng >40% trong 24h - pythonanywhere")
+        msg = f"⏰ {timestamp_now}\n⚠️ Không có coin tăng >40% (or proxy failed)"
+
+    send_telegram_message(msg)
+
 
 if __name__ == "__main__":
     main()
