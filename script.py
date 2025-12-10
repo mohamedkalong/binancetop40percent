@@ -14,6 +14,7 @@ import os
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 
+
 # --- Binance ---
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; TopRankScraper/1.0)"}
 ALLOWED_USD_QUOTES = {"USDT"}
@@ -22,7 +23,7 @@ BINANCE_API_BASE = "https://fapi.binance.com"   # hoạt động tốt trên Pyt
 # Time +7
 utc_now = datetime.now()
 utc_plus_7 = utc_now + timedelta(hours=7)
-result = utc_plus_7.strftime("%Y-%m-%d %H:%M:%S")
+result = utc_plus_7.strftime("%Y-%m-%d, %H:%M:%S")
 
 
 def get_usdm_perp_symbols():
@@ -99,16 +100,15 @@ def main():
     now = result
 
     if fut:
-        message_lines = [f"🚀 *Binance Futures >40% (USDT)*\n⏰ {now}"]
+        message_lines = [f"🚀 *Binance Futures >40% (USDT)* - via pythonganywhere\n⏰ {now}"]
         for i, (sym, base, last, pct) in enumerate(fut, 1):
             message_lines.append(
-                f"{i}. {base} — #{sym}\nGiá: {last:.4f} | 24h: {pct:+.2f}%"
+                f"{i}. {base} — #{sym} | Giá: {last:.4f} | 24h: {pct:+.2f}%"
             )
         message = "\n".join(message_lines)
         send_telegram_message(message)
     else:
-        send_telegram_message(f"⚠️ Không có coin nào tăng >40% trong 24h.\n⏰ {now}")
-
+        send_telegram_message(f"⏰ {now}.\n⚠️ KhôKhông có coin nào tăng >40% trong 24h - pythonanywhere")
 
 if __name__ == "__main__":
     main()
