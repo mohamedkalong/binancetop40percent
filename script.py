@@ -7,8 +7,12 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # --- Telegram ---
-TELEGRAM_TOKEN = "8219004391:AAEyCr89eR33w17-fikVUm3-xYnok1oahRY"
-CHAT_ID = "5235344133"
+#TELEGRAM_TOKEN = "8219004391:AAEyCr89eR33w17-fikVUm3-xYnok1oahRY"
+#CHAT_ID = "5235344133"
+import os
+
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+CHAT_ID = os.getenv("CHAT_ID")
 
 # --- Binance ---
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; TopRankScraper/1.0)"}
