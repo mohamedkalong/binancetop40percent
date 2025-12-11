@@ -3,6 +3,7 @@ import requests
 from datetime import datetime, timedelta
 import urllib3
 import os
+import random  # Thêm để chọn proxy ngẫu nhiên
 
 # Disable SSL warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -15,9 +16,16 @@ CHAT_ID = os.getenv("CHAT_ID")
 #TELEGRAM_TOKEN = "8219004391:AAEyCr89eR33w17-fikVUm3-xYnok1oahRY"
 #CHAT_ID = "5235344133"
 
+# --- Proxies: Hardcode list và chọn random ---
+proxy_list = [
+    'http://8.209.96.245:8443',
+    'http://185.99.70.164:8080',
+    'http://68.183.180.48:8080'
+]
+selected_proxy = random.choice(proxy_list)
 PROXIES = {
-    'http': os.getenv('HTTP_PROXY'),  # Lưu proxy trong GitHub Secrets
-    'https': os.getenv('HTTPS_PROXY')
+    'http': selected_proxy,
+    'https': selected_proxy  # Sử dụng cùng proxy cho HTTPS (thường work với HTTP proxy)
 }
 
 # --- Binance ---
@@ -26,10 +34,7 @@ ALLOWED_USD_QUOTES = {"USDT"}
 BINANCE_API_BASE = "https://fapi.binance.com"   # hoạt động tốt trên PythonAnywhere
 
 # Time +7
-utc_now = datetime.now()
-utc_plus_7 = utc_now + timedelta(hours=7)
-#result = utc_plus_7.strftime("%Y-%m-%d, %H:%M:%S")
-
+# (Đã di chuyển vào main để fresh mỗi lần chạy)
 
 def get_usdm_perp_symbols():
     """Lấy danh sách symbol USDT-M PERPETUAL đang TRADING"""
@@ -50,7 +55,6 @@ def get_usdm_perp_symbols():
         ):
             symbols.add(s["symbol"])
     return symbols
-
 
 def coins_up_over_40pct():
     """Lọc coin USDT-M Futures tăng >40% trong 24h"""
@@ -85,7 +89,6 @@ def coins_up_over_40pct():
     rows.sort(key=lambda x: x[3], reverse=True)
     return rows
 
-
 def send_telegram_message(text):
     """Send Telegram message"""
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
@@ -98,7 +101,6 @@ def send_telegram_message(text):
             print("✅ Đã gửi kết quả lên Telegram")
     except Exception as e:
         print("❌ Lỗi kết nối Telegram:", e)
-
 
 def main():
     utc_now = datetime.now()
@@ -115,7 +117,7 @@ def main():
         message = "\n".join(message_lines)
         send_telegram_message(message)
     else:
-        send_telegram_message(f"⏰ {now}.\n⚠️ KhôKhông có coin nào tăng >40% trong 24h - pythonanywhere")
+        send_telegram_message(f"⏰ {now}.\n⚠️ Không có coin nào tăng >40% trong 24h - pythonanywhere")
 
 if __name__ == "__main__":
     main()
