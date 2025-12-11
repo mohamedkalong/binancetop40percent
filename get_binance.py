@@ -28,7 +28,7 @@ BINANCE_API_BASE = "https://fapi.binance.com"   # hoạt động tốt trên Pyt
 # Time +7
 utc_now = datetime.now()
 utc_plus_7 = utc_now + timedelta(hours=7)
-result = utc_plus_7.strftime("%Y-%m-%d, %H:%M:%S")
+#result = utc_plus_7.strftime("%Y-%m-%d, %H:%M:%S")
 
 
 def get_usdm_perp_symbols():
