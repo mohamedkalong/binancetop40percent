@@ -2,7 +2,7 @@ name: Binance Script
 
 on:
   schedule:
-    - cron: "30 */4 * * *"   # chạy mỗi 4 giờ
+    - cron: "20 0,6,8,11,16,21 * * *"   # chạy vào các khung giờ cố định
   workflow_dispatch:
 
 jobs:
@@ -14,4 +14,4 @@ jobs:
         with:
           python-version: "3.10"
       - run: pip install -r requirements.txt
-      - run: python script.py
+      - run: python get_binance.py
