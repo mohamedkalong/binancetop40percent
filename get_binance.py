@@ -15,6 +15,11 @@ CHAT_ID = os.getenv("CHAT_ID")
 #TELEGRAM_TOKEN = "8219004391:AAEyCr89eR33w17-fikVUm3-xYnok1oahRY"
 #CHAT_ID = "5235344133"
 
+PROXIES = {
+    'http': os.getenv('HTTP_PROXY'),  # Lưu proxy trong GitHub Secrets
+    'https': os.getenv('HTTPS_PROXY')
+}
+
 # --- Binance ---
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; TopRankScraper/1.0)"}
 ALLOWED_USD_QUOTES = {"USDT"}
@@ -29,7 +34,7 @@ result = utc_plus_7.strftime("%Y-%m-%d, %H:%M:%S")
 def get_usdm_perp_symbols():
     """Lấy danh sách symbol USDT-M PERPETUAL đang TRADING"""
     try:
-        resp = requests.get(f"{BINANCE_API_BASE}/fapi/v1/exchangeInfo", headers=HEADERS, timeout=20)
+        resp = requests.get(f"{BINANCE_API_BASE}/fapi/v1/exchangeInfo", headers=HEADERS, timeout=20, proxies=PROXIES)
         resp.raise_for_status()
         info = resp.json()
     except Exception as e:
@@ -52,7 +57,7 @@ def coins_up_over_40pct():
     allowed = get_usdm_perp_symbols()
 
     try:
-        resp = requests.get(f"{BINANCE_API_BASE}/fapi/v1/ticker/24hr", headers=HEADERS, timeout=25)
+        resp = requests.get(f"{BINANCE_API_BASE}/fapi/v1/ticker/24hr", headers=HEADERS, timeout=25, proxies=PROXIES)
         resp.raise_for_status()
         data = resp.json()
     except Exception as e:
@@ -96,9 +101,11 @@ def send_telegram_message(text):
 
 
 def main():
+    utc_now = datetime.now()
+    utc_plus_7 = utc_now + timedelta(hours=7)
+    now = utc_plus_7.strftime("%Y-%m-%d, %H:%M:%S")  # Thay vì now = result
     fut = coins_up_over_40pct()
-    now = result
-
+    
     if fut:
         message_lines = [f"🚀 *Binance Futures >40% (USDT)* - via pythonganywhere\n⏰ {now}"]
         for i, (sym, base, last, pct) in enumerate(fut, 1):
