@@ -23,4 +23,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run script
+          env:  # Set proxy env vars từ secrets
+          HTTP_PROXY: ${{ secrets.HTTP_PROXY }}
+          HTTPS_PROXY: ${{ secrets.HTTPS_PROXY }}
         run: python get_binance.py
