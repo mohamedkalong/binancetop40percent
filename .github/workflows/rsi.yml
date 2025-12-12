@@ -1,0 +1,27 @@
+name: RSI Spot Over 80 Alert Every Hour
+
+on:
+  schedule:
+    - cron: '33 * * * *'  # Mỗi giờ (UTC, 0 phút)
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install requests pandas numpy
+
+      - name: Run the script
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: python rsi_spot_over_80.py
