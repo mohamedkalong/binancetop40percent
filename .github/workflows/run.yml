@@ -2,9 +2,9 @@ name: Run Binance Script
 
 on:
   schedule:
-    - cron: "20 0,6,8,11,16,21 * * *"      # chạy mỗi 4 giờ (0:00, 4:00, 8:00, 12:00...)
-    - cron: "50 2 * * *"
-  workflow_dispatch:            # cho phép bạn chạy thủ công
+    #- cron: "20 0,6,8,11,16,21 * * *"      # chạy mỗi 4 giờ (0:00, 4:00, 8:00, 12:00...)
+    #- cron: "50 2 * * *"
+  #workflow_dispatch:            # cho phép bạn chạy thủ công
 
 jobs:
   run-script:
